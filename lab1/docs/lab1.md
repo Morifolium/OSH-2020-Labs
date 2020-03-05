@@ -1,8 +1,80 @@
 # 实验报告
 
+### 构建初始内存盘
+
+思路：init为启动后首个执行文件，利用busybox，使用shell脚本构建设备文件并执行可执行文件。
+
+```
+#!/bin/sh
+mknod dev/ttyS0 c 4 64
+mknod dev/fb0 c 29 0
+./1
+./2
+./3
+/bin/sh
+```
 
 
-#### 思考题
+
+### 使用汇编语言，编写 x86 裸金属 (bare-metal) 程序 
+
+思路：利用8254 计时器计时，在助教提供的代码基础上增加循环，输出五次。
+
+```.asm
+[BITS 16]                                      ; 16 bits program
+[ORG 0x7C00]                            ; starts from 0x7c00, where MBR lies in memory
+
+L:
+    sti
+    mov ah, 15                              ; clear the screen
+    int 10h
+    mov ah, 0
+    int 10h
+
+    mov bh, 0
+.stt1:
+    inc bh
+    mov si, OSH                            ; si points to string OSH
+
+.print_str:
+    mov ch,0
+    lodsb                                         ; load char to al
+    cmp al, 0                                  ; is it the end of the string?
+    je .stt3                                       ; if true, then halt the system
+    mov ah, 0x0e                          ; if false, then set AH = 0x0e 
+    int 0x10                                     ; call BIOS interrupt procedure, print a char to screen
+    jmp .print_str                         ; loop over to print all chars
+
+.stt3:                                               ; time control
+    inc ch 
+    mov cl, [0x046c]                    ; read [0x046c]
+
+.cy:
+    cmp cl, [0x046c]                    ; and check if the same
+    je .cy
+    cmp ch, 19
+    je  .stt2
+    jmp .stt3
+
+.stt2:
+    cmp bh, 5                                   ; control cycle
+    je .hlt
+    jmp .stt1
+
+.hlt:
+    hlt
+
+
+OSH db `Hello, OSH 2020 Lab1!`, 0dh, 0ah, 0       ; our string, null-terminated
+
+TIMES 510 - ($ - $$) db 0               ; the size of MBR is 512 bytes, fill remaining bytes to 0
+DW 0xAA55  
+```
+
+
+
+
+### 思考题
 
 1.目前，越来越多的 PC 使用 UEFI 启动。请简述使用 UEFI 时系统启动的流程，并与传统 BIOS 的启动流程比较。
 
