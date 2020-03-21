@@ -1,4 +1,0 @@
-qemu-system-x86_64 -kernel 下载/linux-5.4.22/arch/x86_64/boot/bzImage -initrd 文档/Homework/lab1/initrd.cpio.gz -append 'vga=0x343' -serial stdio
-find . | cpio --quiet -H newc -o | gzip -9 -n > ../initrd.cpio.gz
-qemu-system-x86_64 -kernel 下载/linux-5.4.22/arch/x86_64/boot/bzImage -initrd /media/new/Plum/initrd.cpio.gz -append 'vga=0x343' -serial stdio
-/media/new/Plum
