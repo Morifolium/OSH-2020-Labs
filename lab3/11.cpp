@@ -19,7 +19,7 @@ void *handle_chat(void *data)
     struct Pipe *pipe = (struct Pipe *)data;
     char buffer[BUFF_LEN] = "Message:";
     ssize_t len;
-    while ((len = recv(pipe->fd_send, buffer + 8, BUFF_LEN, 0)) > 0)
+    while ((len = recv(pipe->fd_send, buffer + 8, BUFF_LEN, 0)) >= 0)
     {
         send(pipe->fd_recv, buffer, len + 8, 0);
     }
@@ -66,8 +66,8 @@ int main(int argc, char **argv)
     pipe2.fd_recv = fd1;
     pthread_create(&thread1, NULL, handle_chat, (void *)&pipe1);
     pthread_create(&thread2, NULL, handle_chat, (void *)&pipe2);
-    pthread_join(thread1, NULL);
-    pthread_join(thread2, NULL);
+    pthread_detach(thread1);
+    pthread_detach(thread2);
     return 0;
 }
 

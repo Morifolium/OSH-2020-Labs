@@ -22,19 +22,31 @@ void *handle_chat(void *data)
     char message[MS_LEN];
     char buffer[BUFF_LEN];
     ssize_t len;
-    int pos_r = 0, pos_s = 0;
+    int pos_r = 0, pos_s = 0, flag_e = 1;
     while ((len = recv(pipe->fd_send, buffer, BUFF_LEN, 0)) > 0)
     {
         pos_r = 0;
         while (pos_r < len)
         {
+            message[pos_s] = buffer[pos_r];
             if (buffer[pos_r] == '\n')
             {
-                send(pipe->fd_recv, title, sizeof(title), 0);
+                if (flag_e == 1)
+                    send(pipe->fd_recv, title, 8, 0);
                 send(pipe->fd_recv, buffer, pos_s + 1, 0);
-                pos_s = 0;
+                pos_s = -1;
+                flag_e = 1;
             }
-            message[pos_s] = buffer[pos_r];
+            pos_s++;
+            pos_r++;
+        }
+        if (pos_r == len && buffer[len - 1] != '\n')
+        {
+            if (flag_e == 1)
+                send(pipe->fd_recv, title, 8, 0);
+            send(pipe->fd_recv, buffer, pos_s, 0);
+            pos_s = 0;
+            flag_e = 0;
         }
     }
     return NULL;
