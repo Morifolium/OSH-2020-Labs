@@ -19,78 +19,59 @@ struct client
     int port;
 } cli[MAX_CON];
 
-void *handle_chat(void *data)
+void *handle_chat(void *data) //函数有问题
 {
 
     int *x = (int *)data;
     int d = *x;
-    
+
     char title[] = "Message:";
-    char buffer[BUFF_LEN];
+    //char buffer[BUFF_LEN];
     char message[BUFF_LEN];
+    char buffer[1224] = {0};
     ssize_t len;
+    int m;
     int pos_r = 0, pos_s = 0, flag_e = 1;
     while (1)
     {
-        
+
         len = recv(cli[d].sockfd, buffer, BUFF_LEN, 0);
         if (len <= 0)
             break;
+        //buffer[len] = '\0';
         pos_r = 0;
-        for (int m = 0; m < MAX_CON; m++)
+        for (m = 0; m < MAX_CON; m++)
         {
-            if(cli[m].flag==1)
-            while (pos_r < len)
+            pos_r = 0, pos_s = 0;
+            if (cli[m].flag == 1)
             {
-                message[pos_s] = buffer[pos_r];
-                if (buffer[pos_r] == '\n')
+                while (pos_r < len)
+                {
+                    message[pos_s] = buffer[pos_r];
+                    if (buffer[pos_r] == '\n')
+                    {
+                        if (flag_e == 1)
+                            send(cli[m].sockfd, title, 8, 0);
+                        send(cli[m].sockfd, message, pos_s + 1, 0);
+                        pos_s = -1;
+                        flag_e = 1;
+                    }
+                    pos_s++;
+                    pos_r++;
+                }
+                if (pos_r == len && buffer[len - 1] != '\n')
                 {
                     if (flag_e == 1)
                         send(cli[m].sockfd, title, 8, 0);
-                    send(cli[m].sockfd, message, pos_s + 1, 0);
-                    pos_s = -1;
-                    flag_e = 1;
+                    send(cli[m].sockfd, message, pos_s, 0);
+                    pos_s = 0;
+                    flag_e = 0;
                 }
-                pos_s++;
-                pos_r++;
-            }
-            if (pos_r == len && buffer[len - 1] != '\n')
-            {
-                if (flag_e == 1)
-                    send(cli[m].sockfd, title, 8, 0);
-                send(cli[m].sockfd, message, pos_s, 0);
-                pos_s = 0;
-                flag_e = 0;
-            }
-        }
-        
-    }
-    /*
-    char buffer[12240] = {0};
-    char tmp[10240] = {0};
-    int ret;
-    struct timeval tv;
-    struct timezone tz;
-    struct tm *tt;
-    int i;
-    while (1)
-    {
-        ret = read(cli[d].sockfd, tmp, 1024);
-        if (ret <= 0)
-            break;
-        tmp[ret] = '\0';
-        gettimeofday(&tv, &tz);
-        tt = localtime(&tv.tv_sec);
-        sprintf(buffer, "%s @ %d:%d:%d :\n%s", inet_ntoa(cli[d].in), tt->tm_hour, tt->tm_min, tt->tm_sec, tmp);
-        for (i = 0; i < MAX_CON; i++)
-        {
-            if (cli[i].flag == 1)
-            {
-                write(cli[i].sockfd, buffer, strlen(buffer));
+
+                //write(cli[m].sockfd, buffer, strlen(buffer));
             }
         }
     }
-    */
     close(cli[d].sockfd);
     cli[d].flag = 0;
     return NULL;
@@ -146,6 +127,7 @@ int main()
             }
         }
         pthread_create(&tid, NULL, handle_chat, (void *)&i);
+        //pthread_create(&tid, NULL, do_thread_clientopt, (void *)&i);
         pthread_detach(tid);
     }
     return 0;

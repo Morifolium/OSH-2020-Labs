@@ -49,18 +49,20 @@ void *handle_chat(void *data)
         len = recv(cli[d].sockfd, buffer, BUFF_LEN, 0);
         if (len <= 0)
             break;
-        /*
+        
         pthread_mutex_lock(&mutex);
         while (ready == 0)
         {
             pthread_cond_wait(&cv, &mutex);
         }
         ready = 0;
-        */
+        
         pos_r = 0;
         for (int m = 0; m < MAX_CON; m++)
         {
             if (cli[m].flag == 1)
+            {
+                pos_r = 0, pos_s = 0, flag_e = 1;
                 while (pos_r < len)
                 {
                     message[pos_s] = buffer[pos_r];
@@ -75,20 +77,21 @@ void *handle_chat(void *data)
                     pos_s++;
                     pos_r++;
                 }
-            if (pos_r == len && buffer[len - 1] != '\n')
-            {
-                if (flag_e == 1)
-                    send(cli[m].sockfd, title, sizeof(title), 0);
-                send(cli[m].sockfd, message, pos_s, 0);
-                pos_s = 0;
-                flag_e = 0;
+                if (pos_r == len && buffer[len - 1] != '\n')
+                {
+                    if (flag_e == 1)
+                        send(cli[m].sockfd, title, sizeof(title), 0);
+                    send(cli[m].sockfd, message, pos_s, 0);
+                    pos_s = 0;
+                    flag_e = 0;
+                }
             }
         }
-        /*
+        
         ready = 1;
         pthread_cond_signal(&cv);
         pthread_mutex_unlock(&mutex);
-        */
+        
     }
     close(cli[d].sockfd);
     /*
