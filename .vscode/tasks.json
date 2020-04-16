@@ -6,7 +6,8 @@
         "-g",
         "${file}",
         "-o",
-        "${file}.o"
+        "${file}.o",
+        "-lpthread",
     ],
     "problemMatcher": {
         "owner": "cpp",

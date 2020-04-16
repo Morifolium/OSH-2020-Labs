@@ -6,8 +6,8 @@
 #include <netinet/in.h>
 #include <pthread.h>
 
-#define BUFF_LEN 10
-#define MS_LEN 102
+#define BUFF_LEN 100
+#define MS_LEN 100
 
 struct Pipe
 {
@@ -23,7 +23,7 @@ void *handle_chat(void *data)
     char buffer[BUFF_LEN];
     ssize_t len;
     int pos_r = 0, pos_s = 0, flag_e = 1;
-    while ((len = recv(pipe->fd_send, buffer, BUFF_LEN, 0)) > 0)
+    while ((len = read(pipe->fd_send, buffer, BUFF_LEN)) > 0)
     {
         pos_r = 0;
         while (pos_r < len)
@@ -32,8 +32,8 @@ void *handle_chat(void *data)
             if (buffer[pos_r] == '\n')
             {
                 if (flag_e == 1)
-                    send(pipe->fd_recv, title, 8, 0);
-                send(pipe->fd_recv, buffer, pos_s + 1, 0);
+                    write(pipe->fd_recv, title, 8);
+                write(pipe->fd_recv, message, pos_s + 1);
                 pos_s = -1;
                 flag_e = 1;
             }
@@ -43,8 +43,8 @@ void *handle_chat(void *data)
         if (pos_r == len && buffer[len - 1] != '\n')
         {
             if (flag_e == 1)
-                send(pipe->fd_recv, title, 8, 0);
-            send(pipe->fd_recv, buffer, pos_s, 0);
+                write(pipe->fd_recv, title, 8);
+            write(pipe->fd_recv, message, pos_s);
             pos_s = 0;
             flag_e = 0;
         }

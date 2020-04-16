@@ -6,7 +6,7 @@
 #include <netinet/in.h>
 #include <pthread.h>
 
-#define BUFF_LEN 10
+#define BUFF_LEN 1000
 
 struct Pipe
 {
@@ -28,7 +28,8 @@ void *handle_chat(void *data)
 
 int main(int argc, char **argv)
 {
-    int port = atoi(argv[1]);
+    //int port = atoi(argv[1]);
+    int port = 6666;
     int fd;
     if ((fd = socket(AF_INET, SOCK_STREAM, 0)) == 0)
     {
@@ -50,24 +51,30 @@ int main(int argc, char **argv)
         perror("listen");
         return 1;
     }
-    int fd1 = accept(fd, NULL, NULL);
-    int fd2 = accept(fd, NULL, NULL);
-    if (fd1 == -1 || fd2 == -1)
+    int on = 4;
+    setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(int));
+    while (1)
     {
-        perror("accept");
-        return 1;
+
+        int fd1 = accept(fd, NULL, NULL);
+        int fd2 = accept(fd, NULL, NULL);
+        if (fd1 == -1 || fd2 == -1)
+        {
+            perror("accept");
+            return 1;
+        }
+        pthread_t thread1, thread2;
+        struct Pipe pipe1;
+        struct Pipe pipe2;
+        pipe1.fd_send = fd1;
+        pipe1.fd_recv = fd2;
+        pipe2.fd_send = fd2;
+        pipe2.fd_recv = fd1;
+
+        pthread_create(&thread1, NULL, handle_chat, (void *)&pipe1);
+        pthread_create(&thread2, NULL, handle_chat, (void *)&pipe2);
+        pthread_detach(thread1);
+        pthread_detach(thread2);
     }
-    pthread_t thread1, thread2;
-    struct Pipe pipe1;
-    struct Pipe pipe2;
-    pipe1.fd_send = fd1;
-    pipe1.fd_recv = fd2;
-    pipe2.fd_send = fd2;
-    pipe2.fd_recv = fd1;
-    pthread_create(&thread1, NULL, handle_chat, (void *)&pipe1);
-    pthread_create(&thread2, NULL, handle_chat, (void *)&pipe2);
-    pthread_detach(thread1);
-    pthread_detach(thread2);
     return 0;
 }
-

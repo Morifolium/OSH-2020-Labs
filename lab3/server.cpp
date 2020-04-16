@@ -31,7 +31,7 @@ int main(void)
         return -1;
     }
     //2.设置端口复用
-    int on = 4;
+    int on = 1;
     setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(int));
     //3.绑定IP与端口
     struct sockaddr_in addr;
