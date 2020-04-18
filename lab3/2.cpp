@@ -11,6 +11,10 @@
 #define MAX_CON 32
 #define BUFF_LEN 1024
 
+pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+pthread_cond_t cv = PTHREAD_COND_INITIALIZER;
+int ready = 1;
+
 struct client
 {
     int flag = 0;
@@ -19,39 +23,53 @@ struct client
     int port;
 } cli[MAX_CON];
 
-void *handle_chat(void *data) //函数有问题
+void *handle_chat(void *data)
 {
 
     int *x = (int *)data;
     int d = *x;
 
-    char title[] = "Message:";
-    //char buffer[BUFF_LEN];
+    char title[20];
+    char buffer[BUFF_LEN];
     char message[BUFF_LEN];
-    char buffer[1224] = {0};
     ssize_t len;
-    int m;
     int pos_r = 0, pos_s = 0, flag_e = 1;
+
+    sprintf(title, "Message%d:", d);
+    /*
+    pthread_mutex_lock(&mutex);
+    while (ready == 0)
+    {
+        pthread_cond_wait(&cv, &mutex);
+    }
+    ready = 0;
+    */
     while (1)
     {
-
         len = recv(cli[d].sockfd, buffer, BUFF_LEN, 0);
         if (len <= 0)
             break;
-        //buffer[len] = '\0';
-        pos_r = 0;
-        for (m = 0; m < MAX_CON; m++)
+        
+        pthread_mutex_lock(&mutex);
+        while (ready == 0)
         {
-            pos_r = 0, pos_s = 0;
+            pthread_cond_wait(&cv, &mutex);
+        }
+        ready = 0;
+        
+        pos_r = 0;
+        for (int m = 0; m < MAX_CON; m++)
+        {
             if (cli[m].flag == 1)
             {
+                pos_r = 0, pos_s = 0, flag_e = 1;
                 while (pos_r < len)
                 {
                     message[pos_s] = buffer[pos_r];
                     if (buffer[pos_r] == '\n')
                     {
                         if (flag_e == 1)
-                            send(cli[m].sockfd, title, 8, 0);
+                            send(cli[m].sockfd, title, sizeof(title), 0);
                         send(cli[m].sockfd, message, pos_s + 1, 0);
                         pos_s = -1;
                         flag_e = 1;
@@ -62,17 +80,25 @@ void *handle_chat(void *data) //函数有问题
                 if (pos_r == len && buffer[len - 1] != '\n')
                 {
                     if (flag_e == 1)
-                        send(cli[m].sockfd, title, 8, 0);
+                        send(cli[m].sockfd, title, sizeof(title), 0);
                     send(cli[m].sockfd, message, pos_s, 0);
                     pos_s = 0;
                     flag_e = 0;
                 }
-
-                //write(cli[m].sockfd, buffer, strlen(buffer));
             }
         }
+        
+        ready = 1;
+        pthread_cond_signal(&cv);
+        pthread_mutex_unlock(&mutex);
+        
     }
     close(cli[d].sockfd);
+    /*
+    ready = 1;
+    pthread_cond_signal(&cv);
+    pthread_mutex_unlock(&mutex);
+    */
     cli[d].flag = 0;
     return NULL;
 }
@@ -109,6 +135,7 @@ int main()
     pthread_t tid;
     while (1)
     {
+
         cli_fd = accept(fd, (struct sockaddr *)&cli_addr, &addr_len);
         if (cli_fd == -1)
         {
@@ -127,7 +154,6 @@ int main()
             }
         }
         pthread_create(&tid, NULL, handle_chat, (void *)&i);
-        //pthread_create(&tid, NULL, do_thread_clientopt, (void *)&i);
         pthread_detach(tid);
     }
     return 0;
