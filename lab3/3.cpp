@@ -22,6 +22,8 @@ struct client
 } cli[MAX_CON];
 
 char buffer[BUFF_LEN];
+char message[BUFF_LEN];
+char title[20];
 
 int main()
 {
@@ -53,6 +55,8 @@ int main()
     fd_set clients;
     int max_fd = 0, cli_fd;
     struct sockaddr_in cli_addr;
+    int len;
+    int pos_r = 0, pos_s = 0, flag_e = 1;
     while (1)
     {
         max_fd = 0;
@@ -98,16 +102,40 @@ int main()
                 {
                     if (FD_ISSET(cli[j].sockfd, &clients))
                     {
-                        int len = recv(cli[j].sockfd, buffer, 1000, 0);
+                        len = recv(cli[j].sockfd, buffer, 1000, 0);
                         if (len > 0)
                         {
+                            sprintf(title, "Message%d:", j);
                             for (int m = 0; m < MAX_CON; m++)
                             {
                                 if (cli[m].flag == 1)
-                                    send(cli[m].sockfd, buffer, len, 0);
+                                {
+                                    pos_r = 0, pos_s = 0, flag_e = 1;
+                                    while (pos_r < len)
+                                    {
+                                        message[pos_s] = buffer[pos_r];
+                                        if (buffer[pos_r] == '\n')
+                                        {
+                                            if (flag_e == 1)
+                                                send(cli[m].sockfd, title, sizeof(title), 0);
+                                            send(cli[m].sockfd, message, pos_s + 1, 0);
+                                            pos_s = -1;
+                                            flag_e = 1;
+                                        }
+                                        pos_s++;
+                                        pos_r++;
+                                    }
+                                    if (pos_r == len && buffer[len - 1] != '\n')
+                                    {
+                                        if (flag_e == 1)
+                                            send(cli[m].sockfd, title, sizeof(title), 0);
+                                        send(cli[m].sockfd, message, pos_s, 0);
+                                        pos_s = 0;
+                                        flag_e = 0;
+                                    }
+                                }
                             }
-                        }
-                        else
+                        }                        else
                         {
                             FD_CLR(cli[j].sockfd, &clients);
                             cli[j].flag = 0;
