@@ -10,6 +10,7 @@
 
 #define MAX_CON 32
 #define BUFF_LEN 1024
+#define PORT 6666
 
 pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t cv = PTHREAD_COND_INITIALIZER;
@@ -49,14 +50,14 @@ void *handle_chat(void *data)
         len = recv(cli[d].sockfd, buffer, BUFF_LEN, 0);
         if (len <= 0)
             break;
-        
+
         pthread_mutex_lock(&mutex);
         while (ready == 0)
         {
             pthread_cond_wait(&cv, &mutex);
         }
         ready = 0;
-        
+
         pos_r = 0;
         for (int m = 0; m < MAX_CON; m++)
         {
@@ -87,11 +88,10 @@ void *handle_chat(void *data)
                 }
             }
         }
-        
+
         ready = 1;
         pthread_cond_signal(&cv);
         pthread_mutex_unlock(&mutex);
-        
     }
     close(cli[d].sockfd);
     /*
@@ -106,7 +106,7 @@ void *handle_chat(void *data)
 int main()
 {
     //int port = atoi(argv[1]);
-    int port = 6666;
+    int port = PORT;
     int fd;
     if ((fd = socket(AF_INET, SOCK_STREAM, 0)) == 0)
     {
