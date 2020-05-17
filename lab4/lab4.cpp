@@ -30,8 +30,8 @@ int ez(void *arg)
     char **argv = (char **)arg;
     if (chroot(".") == -1)
         error_exit(1, "chroot");
+        
     mkdtemp(tmpdir);
-    
     mount("/", tmpdir, "ext4", MS_BIND, NULL);
     char oldrootdir[50] = "";
     sprintf(oldrootdir, "%s/oldroot", tmpdir);
@@ -389,6 +389,8 @@ int ez(void *arg)
     seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(umount2), 0);
     seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(unshare), 0);
     seccomp_load(ctx);
+    execvp(argv[2], argv + 2);
+    seccomp_release(ctx);
     error_exit(255, "exec");
     return 1;
 }
