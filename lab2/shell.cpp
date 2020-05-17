@@ -6,7 +6,7 @@
 #include <sys/types.h>
 #include <signal.h>
 
-#define CONSOLE "/dev/pts/0"
+#define CONSOLE "/dev/pts/1"
 #define BASH "./shell2.cpp.o"
 
 char cmd[256];

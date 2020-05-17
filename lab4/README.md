@@ -1,1 +1,3 @@
-/media/new/Plum/root
+/media/new/Plum/root/
+-lcap-ng
+-lseccomp
