@@ -11,6 +11,8 @@
 #include <sys/syscall.h>
 #include <cap-ng.h>
 #include <seccomp.h>
+#include <sys/stat.h>
+//#include <iostream>
 
 char tmpdir[] = "/tmp/lab4-XXXXXX";
 
@@ -30,12 +32,13 @@ int ez(void *arg)
     char **argv = (char **)arg;
     if (chroot(".") == -1)
         error_exit(1, "chroot");
-        
+    int id = getpid();
+
     mkdtemp(tmpdir);
     mount("/", tmpdir, "ext4", MS_BIND, NULL);
     char oldrootdir[50] = "";
     sprintf(oldrootdir, "%s/oldroot", tmpdir);
-    syscall(SYS_pivot_root, tmpdir,oldrootdir);
+    syscall(SYS_pivot_root, tmpdir, oldrootdir);
     umount2(oldrootdir, MNT_DETACH);
     rmdir(oldrootdir);
 
@@ -45,15 +48,50 @@ int ez(void *arg)
     mount("tmpfs", "/tmp", "tmpfs", 0, NULL);
     mount("cgroup", "/sys/fs/cgroup/memory", "cgroup", 0, NULL);
     mount("cgroup", "/sys/fs/cgroup/cpu", "cgroup", 0, NULL);
-    mount("cgroup", "/sys/fs/cgroup/memory", "cgroup", 0, NULL);
+    mount("cgroup", "/sys/fs/cgroup/blkio", "cgroup", 0, NULL);
     mount("cgroup", "/sys/fs/cgroup/pids", "cgroup", 0, NULL);
 
+    mkdir("/sys/fs/cgroup/memory/test",0777);
+    FILE *fp = fopen("/sys/fs/cgroup/memory/test/memory.limit_in_bytes", "w+");
+    fprintf(fp, "67108864");
+    fclose(fp);
+    fp = fopen("/sys/fs/cgroup/memory/test/kmem.limit_in_bytes","w+");
+    fprintf(fp, "67108864");
+    fclose(fp);
+    fp = fopen("/sys/fs/cgroup/memory/test/memory.swappiness", "w+");
+    fprintf(fp, "0");
+    fclose(fp);
+    fp = fopen("/sys/fs/cgroup/memory/test/cgroup.procs", "w+");
+    fprintf(fp, "%d", id);
+    fclose(fp);
+    mkdir("/sys/fs/cgroup/cpu/test", 0777);
+    fp = fopen("/sys/fs/cgroup/cpu/test/cgroup.procs", "w+");
+    fprintf(fp, "%d", id);
+    fclose(fp);
+    fp = fopen("/sys/fs/cgroup/cpu/test/cpu.shares", "w+");
+    fprintf(fp, "256");
+    fclose(fp);
+    mkdir("/sys/fs/cgroup/pids/test", 0777);
+    fp = fopen("/sys/fs/cgroup/pids/test/cgroup.procs", "w+");
+    fprintf(fp, "%d", id);
+    fclose(fp);
+    fp = fopen("/sys/fs/cgroup/pids/test/pids.max", "w+");
+    fprintf(fp, "64");
+    fclose(fp);
+    mkdir("/sys/fs/cgroup/blkio/test", 0777);
+    fp = fopen("/sys/fs/cgroup/blkio/test/cgroup.procs", "w+");
+    fprintf(fp, "%d", id);
+    fclose(fp);
+    fp = fopen("/sys/fs/cgroup/blkio/test/blkio.weight", "w+");
+    fprintf(fp, "50");
+    fclose(fp);
+    ;
     capng_clear(CAPNG_SELECT_BOTH);
-    capng_updatev(CAPNG_ADD, capng_type_t( CAPNG_EFFECTIVE | CAPNG_PERMITTED), CAP_SETPCAP,CAP_MKNOD,CAP_AUDIT_WRITE,CAP_CHOWN,CAP_NET_RAW,CAP_DAC_OVERRIDE,CAP_FOWNER,CAP_FSETID,CAP_KILL,CAP_SETGID,CAP_SETUID,CAP_NET_BIND_SERVICE,CAP_SYS_CHROOT,CAP_SETFCAP, -1);
+    capng_updatev(CAPNG_ADD, capng_type_t(CAPNG_EFFECTIVE | CAPNG_PERMITTED), CAP_SETPCAP, CAP_MKNOD, CAP_AUDIT_WRITE, CAP_CHOWN, CAP_NET_RAW, CAP_DAC_OVERRIDE, CAP_FOWNER, CAP_FSETID, CAP_KILL, CAP_SETGID, CAP_SETUID, CAP_NET_BIND_SERVICE, CAP_SYS_CHROOT, CAP_SETFCAP, -1);
     capng_apply(CAPNG_SELECT_BOTH);
 
-    scmp_filter_ctx ctx=seccomp_init(SCMP_ACT_KILL);
-    seccomp_rule_add(ctx, SCMP_ACT_ALLOW,SCMP_SYS(accept),0);
+    scmp_filter_ctx ctx = seccomp_init(SCMP_ACT_KILL);
+    seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(accept), 0);
     seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(accept4), 0);
     seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(access), 0);
     seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(adjtimex), 0);
@@ -389,8 +427,13 @@ int ez(void *arg)
     seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(umount2), 0);
     seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(unshare), 0);
     seccomp_load(ctx);
+
     execvp(argv[2], argv + 2);
     seccomp_release(ctx);
+    rmdir("/sys/fs/cgroup/blkio/test");
+    rmdir("/sys/fs/cgroup/cpu/test");
+    rmdir("/sys/fs/cgroup/memory/test");
+    rmdir("/sys/fs/cgroup/pids/test");
     error_exit(255, "exec");
     return 1;
 }
