@@ -1,8 +1,0 @@
-a.txt
-s
-s1
-sh.cpp
-shell
-shell111.cpp
-shell1.cpp
-shell.cpp

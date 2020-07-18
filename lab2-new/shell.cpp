@@ -9,6 +9,8 @@
 #include <sys/stat.h>
 #include <dirent.h>
 
+#define ALIA 8
+
 char *args[128];
 char *arg1[128];
 char *arg2[128];
@@ -21,6 +23,16 @@ int out_flag;
 int pip_flag;
 int bck_flag;
 int and_flag;
+
+
+
+struct ist
+{
+    int len=0;
+    int use = 0;
+    char name[128];
+    char *rp[128];
+}st[ALIA];
 
 int main()
 {
@@ -213,6 +225,14 @@ void run_dir(char *arg[128])
                 setenv(name, value, 1);
             }
             return;
+        }
+        if(strcmp(arg[0],"echo")==0&&strcmp(arg[1],"$PATH")==0)
+        {
+            puts(getenv("PATH"));
+        }
+        if (strcmp(arg[0], "echo") == 0 && strcmp(arg[1], "~") == 0)
+        {
+            puts(getenv("HOME"));
         }
         if (strcmp(arg[0], "exit") == 0)
             return;
